@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Show Control Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <div class="container mx-auto p-4">
+        <h1 class="text-4xl font-bold mb-12 mt-8 text-center">TikTok Show Control Dashboard</h1>
+
+        <!-- Add Q&A Form -->
+        <form action="/questions/add" method="POST" class="mb-6">
+            <div class="flex gap-4 items-center">
+                <input type="text" name="content" placeholder="Enter the question"
+                    class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <input type="text" name="answer" placeholder="Enter the answer"
+                    class="w-full p-2 rounded bg-gray-800 text-white" required>
+            </div>
+            <button type="submit" class="mt-4 p-2 bg-blue-500 hover:bg-blue-700 text-white rounded">
+                Add Q & A
+            </button>
+        </form>
+        <div class="mt-2 text-center">
+            <a href="/all-questions" class="px-4 py-2 mb-8 bg-blue-500 hover:bg-blue-700 text-white rounded">
+                View All Questions & Answers
+            </a>
+        </div>
+        
+
+        <!-- Currently On-Air Section -->
+        <div class=" bg-gray-700 p-4 rounded shadow text-white mb-8">
+            <h2 class="text-2xl text-red-600 font-bold mb-2">Currently On-Air</h2>
+            <p id="current-question" class="text-lg">Question: <span class="font-semibold">Waiting...</span></p>
+            <p id="current-answer" class="text-lg">Answer: <span class="font-semibold">Waiting...</span></p>
+        </div>
+
+        <!-- Available Questions -->
+        <h2 class="text-2xl font-semibold mt-8 mb-4">Available Questions <span
+                class="text-lg p-2 font-small text-gray-600">(Select a question)</span></h2>
+        <ul id="question-list" class="bg-gray-800 rounded p-4"></ul>
+
+        <!-- Action Buttons -->
+        <button id="send-question" disabled
+            class="mt-4 p-2 bg-green-500 hover:bg-green-700 text-white rounded disabled:opacity-50">
+            Send Question On-Air
+        </button>
+        <button id="send-answer" disabled
+            class="p-2 bg-blue-500 hover:bg-blue-700 text-white rounded disabled:opacity-50">
+            Display Answer
+        </button>
+        <button id="clear-output" class="mt-4 p-2 bg-red-500 hover:bg-red-700 text-white rounded">
+            CLEAR Output
+        </button>
+    </div>
+
+    <script>
+        const socket = io();
+        let selectedQuestion = null;
+
+        // Fetch and display preloaded questions
+        fetch('/questions')
+            .then(response => response.json())
+            .then(questions => {
+                const questionList = document.getElementById('question-list');
+                questions.forEach(q => {
+                    const li = document.createElement('li');
+                    li.className = "flex justify-between items-center p-2 rounded hover:bg-gray-700 cursor-pointer";
+
+                    const questionText = document.createElement('span');
+                    questionText.textContent = q.content;
+
+                    li.onclick = () => {
+                        Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
+                        li.classList.add('bg-blue-500');
+                        selectedQuestion = q;
+                        document.getElementById('send-question').disabled = false;
+                        document.getElementById('send-answer').disabled = false;
+                    };
+
+                    const deleteBtn = document.createElement('form');
+                    deleteBtn.method = 'POST';
+                    deleteBtn.action = `/questions/delete/${q._id}`;
+                    deleteBtn.innerHTML = `
+                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded">
+                            Delete
+                        </button>
+                    `;
+
+                    li.appendChild(questionText);
+                    li.appendChild(deleteBtn);
+                    questionList.appendChild(li);
+                });
+            });
+
+        // Send question and answer to output
+        document.getElementById('send-question').onclick = () => {
+            if (selectedQuestion) {
+                socket.emit('display-question', {
+                    content: selectedQuestion.content,
+                    answer: selectedQuestion.answer // Include the answer when sending the question
+                });
+                updateOnAir(selectedQuestion.content, selectedQuestion.answer);
+            }
+        };
+
+        // Send answer to output
+        // Highlight already played questions
+        document.getElementById('send-answer').onclick = () => {
+            if (selectedQuestion) {
+                socket.emit('display-answer', { answer: selectedQuestion.answer });
+
+                // Mark the question as used
+                const questionList = document.getElementById('question-list');
+                Array.from(questionList.children).forEach(li => {
+                    if (li.classList.contains('bg-blue-500')) {
+                        li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
+                        li.classList.add('bg-gray-600', 'opacity-50', 'cursor-not-allowed');
+                        li.querySelector('span').style.textDecoration = 'line-through';
+                        li.querySelector('span').style.color = 'gray';
+                        li.onclick = null;
+                    }
+                });
+
+                // Reset selection
+                selectedQuestion = null;
+                document.getElementById('send-question').disabled = true;
+                document.getElementById('send-answer').disabled = true;
+            }
+        };
+
+
+        // Clear output
+        document.getElementById('clear-output').onclick = () => {
+            socket.emit('clear-output');
+            updateOnAir("", ""); // Clear currently on-air display
+        };
+
+        // Update "Currently On-Air" Section
+        socket.on('current-onair', (data) => {
+            updateOnAir(data.question, data.answer);
+        });
+
+        function updateOnAir(question, answer) {
+            document.getElementById('current-question').innerHTML =
+                `Question: <span class="font-semibold">${question || 'Waiting...'}</span>`;
+            document.getElementById('current-answer').innerHTML =
+                `Answer: <span class="font-semibold">${answer || 'Waiting...'}</span>`;
+        }
+    </script>
+</body>
+
+</html>

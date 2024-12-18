@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Output</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0); /* Transparent background */
+            overflow: hidden;
+        }
+
+        /* 9:16 Container */
+        .container {
+            position: relative;
+            width: 608px;
+            height: 1080px;
+            background: rgba(0, 0, 0, 0); /* Transparent background */
+            overflow: hidden;
+        }
+
+        /* Top Overlay with Fading Gradient and Wave Animation */
+        .top-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15%;
+            background: linear-gradient(to bottom, #9C27B0, rgba(0, 0, 0, 0));
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .top-overlay::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 188, 212, 0.5), transparent 70%);
+            border-radius: 50%;
+            animation: wave-motion 6s linear infinite;
+            opacity: 0.6; /* Wave transparency */
+        }
+
+        @keyframes wave-motion {
+            0% {
+                transform: translateX(0) translateY(-30%) scaleY(0.6);
+            }
+            50% {
+                transform: translateX(-50%) translateY(-20%) scaleY(0.7);
+            }
+            100% {
+                transform: translateX(-100%) translateY(-30%) scaleY(0.6);
+            }
+        }
+
+        /* Bottom Overlay Animation */
+        .bottom-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 15%;
+            background: linear-gradient(to top, #00BCD4, rgba(0, 0, 0, 0));
+            z-index: 1;
+        }
+
+        /* Top Logo */
+        .top-logo {
+            position: absolute;
+            top: 7%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            z-index: 10;
+        }
+
+        /* Question Bar */
+        #question {
+            position: absolute;
+            top: 19%;
+            left: 15%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 60px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            padding: 15px 10px;
+            border-radius: 10px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-wrap: break-word;
+            overflow: hidden;
+            background: linear-gradient(to right, #00BCD4, #9C27B0);
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            display: none;
+        }
+
+        
+        #question.show-blast {
+            animation: blast-effect 1s ease-out forwards;
+            display: block;
+        }
+
+        /* Answer Bar */
+        #answer {
+            position: absolute;
+            top: 25%;
+            left: 15%;
+            transform: translateX(-50%);
+            width: 70%;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            color: white;
+            background: linear-gradient(to right, #FF0050, #00F2EA); /* TikTok gradient */
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5);
+            display: none; /* Initially hidden */
+        }
+
+        /* TikTok-inspired Blast Animation for Answer */
+        @keyframes blast-effect {
+            0% {
+                transform: scale(0.2) rotate(-10deg);
+                opacity: 0;
+            }
+            70% {
+                transform: scale(1.2) rotate(5deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        #answer.show-blast {
+            animation: blast-effect 1s ease-out forwards;
+            display: block;
+        }
+
+              /* Bottom Right Logo */
+              .bottom-logo {
+            position: absolute;
+            bottom: 8%;
+            right: 12%;
+            width: 80px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Top Overlay Animation -->
+        <div class="top-overlay"></div>
+
+        <!-- Bottom Overlay Animation -->
+        <div class="bottom-overlay"></div>
+
+        <!-- Top Logo -->
+        <img src="/images/top-logo.png" alt="Top Logo" class="top-logo">
+
+        <!-- Question Text -->
+        <div id="question"></div>
+
+        <!-- Answer Text -->
+        <div id="answer"></div>
+
+        <!-- Bottom Right Logo -->
+        <img src="/images/bottom-logo.png" alt="Bottom Logo" class="bottom-logo">
+    </div>
+
+    <script>
+        const socket = io();
+
+        // Show the question
+        socket.on('show-question', (data) => {
+            const questionElement = document.getElementById('question');
+            questionElement.textContent = data.content;
+            
+            // Reset animation state
+            questionElement.style.display = 'none';
+            questionElement.classList.remove('show-blast');
+            void questionElement.offsetWidth; // Trigger reflow
+
+            // Show with animation
+            questionElement.style.display = 'block';
+            questionElement.classList.add('show-blast');
+        });
+
+        // Show the answer with animation
+        socket.on('show-answer', (data) => {
+            const answerElement = document.getElementById('answer');
+            answerElement.textContent = data.answer;
+
+            // Reset animation state
+            answerElement.style.display = 'none';
+            answerElement.classList.remove('show-blast');
+            void answerElement.offsetWidth; // Trigger reflow
+
+            // Show with animation
+            answerElement.style.display = 'block';
+            answerElement.classList.add('show-blast');
+        });
+
+        // Clear the screen
+        socket.on('clear-screen', () => {
+            const questionElement = document.getElementById('question');
+            const answerElement = document.getElementById('answer');
+
+            questionElement.style.display = 'none';
+            answerElement.style.display = 'none';
+
+            // Reset the animation state
+            answerElement.classList.remove('show-blast');
+        });
+    </script>
+</body>
+
+</html>
