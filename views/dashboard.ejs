@@ -8,17 +8,16 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        /* Ensure the question list fits within the screen */
         #question-container {
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 350px); /* Adjust height based on other sections */
-            overflow-y: auto; /* Allow scrolling */
+            height: calc(100vh - 350px);
+            overflow-y: auto;
         }
 
         #question-list {
             flex: 1;
-            overflow-y: auto; /* Scrollable area for long lists */
+            overflow-y: auto;
         }
 
         #actions {
@@ -27,7 +26,6 @@
             justify-content: space-between;
         }
 
-        /* Custom scrollbar styling for better visibility */
         #question-list::-webkit-scrollbar {
             width: 8px;
         }
@@ -43,6 +41,13 @@
 
         #question-list::-webkit-scrollbar-thumb:hover {
             background: #718096;
+        }
+
+        .disabled {
+            background-color: #4a5568;
+            cursor: not-allowed;
+            opacity: 0.6;
+            text-decoration: line-through;
         }
     </style>
 </head>
@@ -72,7 +77,7 @@
         <!-- Currently On-Air Section -->
         <div class="bg-gray-700 p-4 rounded shadow text-white mb-8">
             <h2 class="text-4xl text-red-600 font-bold mb-2">Currently On-Air</h2>
-            <p id="current-question" class="text-2xl">Question: <span class="font-semibold ">Waiting...</span></p>
+            <p id="current-question" class="text-2xl">Question: <span class="font-semibold">Waiting...</span></p>
             <p id="current-answer" class="text-2xl">Answer: <span class="font-semibold">Waiting...</span></p>
         </div>
 
@@ -115,11 +120,13 @@
                     questionText.textContent = q.content;
 
                     li.onclick = () => {
-                        Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
-                        li.classList.add('bg-blue-500');
-                        selectedQuestion = q;
-                        document.getElementById('send-question').disabled = false;
-                        document.getElementById('send-answer').disabled = false;
+                        if (!li.classList.contains('disabled')) {
+                            Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
+                            li.classList.add('bg-blue-500');
+                            selectedQuestion = q;
+                            document.getElementById('send-question').disabled = false;
+                            document.getElementById('send-answer').disabled = false;
+                        }
                     };
 
                     const deleteBtn = document.createElement('form');
@@ -137,21 +144,33 @@
                 });
             });
 
-        // Send question and answer to output
+        // Send question to output
         document.getElementById('send-question').onclick = () => {
             if (selectedQuestion) {
-                socket.emit('display-question', {
-                    content: selectedQuestion.content,
-                    answer: selectedQuestion.answer
-                });
+                socket.emit('display-question', { content: selectedQuestion.content });
                 updateOnAir(selectedQuestion.content, selectedQuestion.answer);
             }
         };
 
+        // Send answer to output and disable question
         document.getElementById('send-answer').onclick = () => {
             if (selectedQuestion) {
                 socket.emit('display-answer', { answer: selectedQuestion.answer });
                 updateOnAir(selectedQuestion.content, selectedQuestion.answer);
+
+                const questionList = document.getElementById('question-list');
+                Array.from(questionList.children).forEach(li => {
+                    if (li.classList.contains('bg-blue-500')) {
+                        li.classList.add('disabled');
+                        li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
+                        li.querySelector('span').style.color = '#718096';
+                        li.onclick = null;
+                    }
+                });
+
+                selectedQuestion = null;
+                document.getElementById('send-question').disabled = true;
+                document.getElementById('send-answer').disabled = true;
             }
         };
 
