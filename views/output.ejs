@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=MV+Waheed&display=swap" rel="stylesheet">
+
     <title>Live Output</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
@@ -19,7 +22,8 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: rgba(0, 0, 0, 0); /* Transparent background */
+            background: rgba(0, 0, 0, 0);
+            /* Transparent background */
             overflow: hidden;
         }
 
@@ -28,7 +32,8 @@
             position: relative;
             width: 608px;
             height: 1080px;
-            background: rgba(0, 0, 0, 0); /* Transparent background */
+            background: rgba(0, 0, 0, 0);
+            /* Transparent background */
             overflow: hidden;
         }
 
@@ -54,16 +59,19 @@
             background: radial-gradient(circle, rgba(0, 188, 212, 0.5), transparent 70%);
             border-radius: 50%;
             animation: wave-motion 6s linear infinite;
-            opacity: 0.6; /* Wave transparency */
+            opacity: 0.6;
+            /* Wave transparency */
         }
 
         @keyframes wave-motion {
             0% {
                 transform: translateX(0) translateY(-30%) scaleY(0.6);
             }
+
             50% {
                 transform: translateX(-50%) translateY(-20%) scaleY(0.7);
             }
+
             100% {
                 transform: translateX(-100%) translateY(-30%) scaleY(0.6);
             }
@@ -101,7 +109,7 @@
             font-size: 1.8rem;
             font-weight: bold;
             color: white;
-            padding: 8px 2px;
+            padding: 10px 5px;
             border-radius: 10px;
             text-align: center;
             display: flex;
@@ -115,7 +123,7 @@
             display: none;
         }
 
-        
+
         #question.show-blast {
             animation: blast-effect 1s ease-out forwards;
             display: block;
@@ -132,11 +140,13 @@
             font-weight: bold;
             text-align: center;
             color: white;
-            background: linear-gradient(to right, #FF0050, #00F2EA); /* TikTok gradient */
+            background: linear-gradient(to right, #FF0050, #00F2EA);
+            /* TikTok gradient */
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5);
-            display: none; /* Initially hidden */
+            display: none;
+            /* Initially hidden */
         }
 
         /* TikTok-inspired Blast Animation for Answer */
@@ -145,10 +155,12 @@
                 transform: scale(0.2) rotate(-10deg);
                 opacity: 0;
             }
+
             70% {
                 transform: scale(1.2) rotate(5deg);
                 opacity: 1;
             }
+
             100% {
                 transform: scale(1) rotate(0deg);
                 opacity: 1;
@@ -160,8 +172,8 @@
             display: block;
         }
 
-              /* Bottom Right Logo */
-              .bottom-logo {
+        /* Bottom Right Logo */
+        .bottom-logo {
             position: absolute;
             bottom: 8%;
             right: 12%;
@@ -199,7 +211,7 @@
         socket.on('show-question', (data) => {
             const questionElement = document.getElementById('question');
             questionElement.textContent = data.content;
-            
+
             // Reset animation state
             questionElement.style.display = 'none';
             questionElement.classList.remove('show-blast');
