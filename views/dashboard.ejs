@@ -7,6 +7,44 @@
     <title>TikTok Show Control Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* Ensure the question list fits within the screen */
+        #question-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 350px); /* Adjust height based on other sections */
+            overflow-y: auto; /* Allow scrolling */
+        }
+
+        #question-list {
+            flex: 1;
+            overflow-y: auto; /* Scrollable area for long lists */
+        }
+
+        #actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Custom scrollbar styling for better visibility */
+        #question-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #question-list::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        #question-list::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+
+        #question-list::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-900 text-white font-sans">
@@ -30,32 +68,34 @@
                 View All Questions & Answers
             </a>
         </div>
-        
 
         <!-- Currently On-Air Section -->
-        <div class=" bg-gray-700 p-4 rounded shadow text-white mb-8">
-            <h2 class="text-2xl text-red-600 font-bold mb-2">Currently On-Air</h2>
-            <p id="current-question" class="text-lg">Question: <span class="font-semibold">Waiting...</span></p>
-            <p id="current-answer" class="text-lg">Answer: <span class="font-semibold">Waiting...</span></p>
+        <div class="bg-gray-700 p-4 rounded shadow text-white mb-8">
+            <h2 class="text-4xl text-red-600 font-bold mb-2">Currently On-Air</h2>
+            <p id="current-question" class="text-2xl">Question: <span class="font-semibold ">Waiting...</span></p>
+            <p id="current-answer" class="text-2xl">Answer: <span class="font-semibold">Waiting...</span></p>
         </div>
 
         <!-- Available Questions -->
-        <h2 class="text-2xl font-semibold mt-8 mb-4">Available Questions <span
-                class="text-lg p-2 font-small text-gray-600">(Select a question)</span></h2>
-        <ul id="question-list" class="bg-gray-800 rounded p-4"></ul>
+        <h2 class="text-2xl font-semibold mt-8 mb-4">Available Questions</h2>
+        <div id="question-container" class="bg-gray-800 rounded p-4">
+            <ul id="question-list"></ul>
+        </div>
 
         <!-- Action Buttons -->
-        <button id="send-question" disabled
-            class="mt-4 p-2 bg-green-500 hover:bg-green-700 text-white rounded disabled:opacity-50">
-            Send Question On-Air
-        </button>
-        <button id="send-answer" disabled
-            class="p-2 bg-blue-500 hover:bg-blue-700 text-white rounded disabled:opacity-50">
-            Display Answer
-        </button>
-        <button id="clear-output" class="mt-4 p-2 bg-red-500 hover:bg-red-700 text-white rounded">
-            CLEAR Output
-        </button>
+        <div id="actions">
+            <button id="send-question" disabled
+                class="p-2 bg-green-500 hover:bg-green-700 text-white rounded disabled:opacity-50">
+                Send Question On-Air
+            </button>
+            <button id="send-answer" disabled
+                class="p-2 bg-blue-500 hover:bg-blue-700 text-white rounded disabled:opacity-50">
+                Display Answer
+            </button>
+            <button id="clear-output" class="p-2 bg-red-500 hover:bg-red-700 text-white rounded">
+                CLEAR Output
+            </button>
+        </div>
     </div>
 
     <script>
@@ -102,42 +142,23 @@
             if (selectedQuestion) {
                 socket.emit('display-question', {
                     content: selectedQuestion.content,
-                    answer: selectedQuestion.answer // Include the answer when sending the question
+                    answer: selectedQuestion.answer
                 });
                 updateOnAir(selectedQuestion.content, selectedQuestion.answer);
             }
         };
 
-        // Send answer to output
-        // Highlight already played questions
         document.getElementById('send-answer').onclick = () => {
             if (selectedQuestion) {
                 socket.emit('display-answer', { answer: selectedQuestion.answer });
-
-                // Mark the question as used
-                const questionList = document.getElementById('question-list');
-                Array.from(questionList.children).forEach(li => {
-                    if (li.classList.contains('bg-blue-500')) {
-                        li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
-                        li.classList.add('bg-gray-600', 'opacity-50', 'cursor-not-allowed');
-                        li.querySelector('span').style.textDecoration = 'line-through';
-                        li.querySelector('span').style.color = 'gray';
-                        li.onclick = null;
-                    }
-                });
-
-                // Reset selection
-                selectedQuestion = null;
-                document.getElementById('send-question').disabled = true;
-                document.getElementById('send-answer').disabled = true;
+                updateOnAir(selectedQuestion.content, selectedQuestion.answer);
             }
         };
-
 
         // Clear output
         document.getElementById('clear-output').onclick = () => {
             socket.emit('clear-output');
-            updateOnAir("", ""); // Clear currently on-air display
+            updateOnAir("", "");
         };
 
         // Update "Currently On-Air" Section
