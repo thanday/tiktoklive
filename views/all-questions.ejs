@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>All Questions & Answers</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .on-air {
+            background-color: #ff5722;
+            /* Highlight color */
+            color: white;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-900 text-white font-sans">
@@ -20,15 +29,23 @@
                         <th class="px-4 py-2">Answer</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <% questions.forEach((q, index) => { %>
-                    <tr class="border-b border-gray-700">
-                        <td class="px-4 py-2"><%= index + 1 %></td>
-                        <td class="px-4 py-2"><%= q.content %></td>
-                        <td class="px-4 py-2"><%= q.answer %></td>
-                    </tr>
-                    <% }); %>
+                <tbody id="questions-table">
+                    <% questions.forEach((q, index)=> { %>
+                        <tr class="border-b border-gray-700" data-id="<%= q._id %>">
+                            <td class="px-4 py-2">
+                                <%= index + 1 %>
+                            </td>
+                            <td class="px-4 py-2">
+                                <%= q.content %>
+                            </td>
+                            <td class="px-4 py-2">
+                                <%= q.answer %>
+                            </td>
+                        </tr>
+                        <% }); %>
                 </tbody>
+
+
             </table>
         </div>
         <div class="mt-8 text-center">
@@ -37,6 +54,29 @@
             </a>
         </div>
     </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('current-onair', (data) => {
+            console.log('On-Air Question:', data); // Debugging
+
+            const questionRows = document.querySelectorAll('#questions-table tr');
+
+            questionRows.forEach(row => {
+                // Remove highlight from all rows
+                row.classList.remove('on-air');
+
+                // Highlight the row with the matching data-id
+                if (row.dataset.id === data.questionId) {
+                    row.classList.add('on-air');
+                }
+            });
+        });
+
+
+
+    </script>
 </body>
 
 </html>

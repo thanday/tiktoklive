@@ -13,7 +13,8 @@
     "ejs": "^3.1.10",
     "express": "^4.21.2",
     "mongoose": "^8.9.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "tiktok-live-connector": "^1.2.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
