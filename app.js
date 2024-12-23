@@ -27,28 +27,35 @@ const tiktokUsername = "sstvmv";
 const tiktokLiveConnection = new WebcastPushConnection(tiktokUsername);
 
 // Connect to the chat
-tiktokLiveConnection.connect().then(state => {
-    console.info(`Connected to roomId ${state.roomId}`);
-}).catch(err => {
-    console.error('Failed to connect', err);
-});
+// Handle connection
+tiktokLiveConnection.connect()
+    .then(state => {
+        console.info(`Connected to roomId ${state.roomId}`);
+    })
+    .catch(err => {
+        console.error('Failed to connect:', err);
+
+        // Emit "not-live" event to clients if user is not live
+        if (err.message.includes('LIVE')) {
+            io.emit('not-live', { message: `The user ${tiktokUsername} is not currently live.` });
+        }
+    });
 
 // Handle chat messages
 tiktokLiveConnection.on('chat', data => {
-   // console.log(`${data.uniqueId} writes: ${data.comment}`);
-    io.emit('tiktok-chat', data); // Emit chat messages to connected clients
+    io.emit('tiktok-chat', data);
 });
 
 // Handle gifts
 tiktokLiveConnection.on('gift', data => {
-    console.log(`${data.uniqueId} sends gift: ${data.giftName}`);
-    io.emit('tiktok-gift', data); // Emit gift events to connected clients
+    io.emit('tiktok-gift', data);
 });
 
-// Handle connection errors
+// Handle errors
 tiktokLiveConnection.on('error', err => {
     console.error('Connection error:', err);
 });
+
 
 // Middleware
 app.use(express.static(path.join(__dirname, 'public')));
