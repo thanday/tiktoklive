@@ -123,6 +123,25 @@
             display: none;
         }
 
+        #sponsor-image {
+            display: none;
+            /* Initially hidden */
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 150px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #sponsor-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
 
         #question.show-blast {
             animation: blast-effect 1s ease-out forwards;
@@ -200,6 +219,12 @@
         <!-- Answer Text -->
         <div id="answer"></div>
 
+        <!-- Image Display Area -->
+        <!-- Sponsor Image Display Area -->
+        <!-- Sponsor Image Display Area -->
+        <div id="sponsor-image" style="display: none;"></div>
+
+
         <!-- Bottom Right Logo -->
         <img src="/images/bottom-logo.png" alt="Bottom Logo" class="bottom-logo">
     </div>
@@ -248,6 +273,21 @@
             // Reset the animation state
             answerElement.classList.remove('show-blast');
         });
+
+        socket.on('display-sponsor', (data) => {
+            const sponsorImageDiv = document.getElementById('sponsor-image');
+            sponsorImageDiv.innerHTML = `<img src="${data.imageUrl}" alt="Sponsor Image" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+            sponsorImageDiv.style.display = 'block'; // Show the sponsor image area
+        });
+
+        socket.on('clear-sponsor', () => {
+            const sponsorImageDiv = document.getElementById('sponsor-image');
+            sponsorImageDiv.innerHTML = ''; // Clear any content
+            sponsorImageDiv.style.display = 'none'; // Hide the sponsor image area
+        });
+
+
+
     </script>
 </body>
 

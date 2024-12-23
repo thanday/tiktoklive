@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Comments & Gifts</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="/socket.io/socket.io.js"></script>
     <style>
-        /* Style adjustments for larger text and full-page fit */
         body {
             display: flex;
             justify-content: center;
@@ -20,8 +18,8 @@
             width: 90%;
             height: 90%;
             display: flex;
+            flex-direction: column;
             gap: 2rem;
-            flex-direction: row;
         }
 
         .section {
@@ -44,19 +42,6 @@
             color: #edf2f7;
         }
 
-        .content::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        .content::-webkit-scrollbar-thumb {
-            background-color: #4a5568;
-            border-radius: 5px;
-        }
-
-        .content::-webkit-scrollbar-thumb:hover {
-            background-color: #718096;
-        }
-
         .not-live {
             font-size: 2rem;
             color: #e53e3e;
@@ -64,53 +49,51 @@
             margin-top: 2rem;
         }
     </style>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Comments Section -->
-        <div class="section">
-            <h2>Comments</h2>
-            <div id="comments" class="content">
-                <!-- Comments will be dynamically added here -->
-            </div>
+    <div class="container" id="main-container">
+        <div id="not-live-message" class="not-live hidden">
+            The user is not currently live.
         </div>
 
-        <!-- Gifts Section -->
-        <div class="section">
-            <h2>Gifts</h2>
-            <div id="gifts" class="content">
-                <!-- Gifts will be dynamically added here -->
+        <div id="live-sections" class="hidden">
+            <!-- Comments Section -->
+            <div class="section">
+                <h2>Comments</h2>
+                <div id="comments" class="content"></div>
+            </div>
+
+            <!-- Gifts Section -->
+            <div class="section">
+                <h2>Gifts</h2>
+                <div id="gifts" class="content"></div>
             </div>
         </div>
     </div>
-
     <script>
         const socket = io();
+        const notLiveMessage = document.getElementById('not-live-message');
+        const liveSections = document.getElementById('live-sections');
 
-        // Display new comments in real time
-        socket.on('tiktok-chat', (data) => {
-            const commentsDiv = document.getElementById('comments');
-            const commentItem = document.createElement('div');
-            commentItem.className = 'p-2 border-b border-gray-600';
-            commentItem.innerHTML = `<strong>${data.uniqueId}:</strong> ${data.comment}`;
-            commentsDiv.appendChild(commentItem);
-            commentsDiv.scrollTop = commentsDiv.scrollHeight; // Scroll to the latest comment
-        });
-
-        // Display new gifts in real time
-        socket.on('tiktok-gift', (data) => {
-            const giftsDiv = document.getElementById('gifts');
-            const giftItem = document.createElement('div');
-            giftItem.className = 'p-2 border-b border-gray-600';
-            giftItem.innerHTML = `<strong>${data.uniqueId}</strong> sent <em>${data.giftName}</em> x${data.repeatCount}`;
-            giftsDiv.appendChild(giftItem);
-            giftsDiv.scrollTop = giftsDiv.scrollHeight; // Scroll to the latest gift
-        });
-
-        // Handle user not live
         socket.on('not-live', (data) => {
-            document.body.innerHTML = `<div class="not-live">${data.message}</div>`;
-        });
+    document.getElementById('not-live-message').textContent = data.message;
+    document.getElementById('not-live-message').classList.remove('hidden');
+    document.getElementById('live-sections').classList.add('hidden');
+});
+
+socket.on('tiktok-chat', (data) => {
+    document.getElementById('not-live-message').classList.add('hidden');
+    document.getElementById('live-sections').classList.remove('hidden');
+    // Handle chat rendering...
+});
+
+socket.on('tiktok-gift', (data) => {
+    document.getElementById('not-live-message').classList.add('hidden');
+    document.getElementById('live-sections').classList.remove('hidden');
+    // Handle gift rendering...
+});
+
     </script>
 </body>
 </html>

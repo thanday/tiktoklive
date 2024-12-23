@@ -4,10 +4,12 @@ const { Server } = require('socket.io');
 const path = require('path');
 const Question = require('./controllers/questionModel'); // Adjust the path if needed
 const { WebcastPushConnection } = require('tiktok-live-connector');
+const multer = require('multer');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const mongoose = require('mongoose');
+
 
 // Connect to MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/tiktokLive', {
@@ -21,41 +23,92 @@ db.once('open', () => {
     console.log('Connected to MongoDB');
 });
 
-//Tiktok connector API
+// Set up storage for multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+const upload = multer({ storage });
+const uploadedSponsorImages = []; // This array should persist all uploaded images
+
+app.post('/upload-sponsor', upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    const sponsorImageUrl = `/uploads/${req.file.filename}`;
+    uploadedSponsorImages.push({ url: sponsorImageUrl, filename: req.file.originalname });
+
+    // Do not emit display-sponsor immediately
+    res.json({ imageUrl: sponsorImageUrl });
+});
+
+app.get('/sponsor-images', (req, res) => {
+    res.json(uploadedSponsorImages); // Return all uploaded images
+});
+
+
+
+
+
+
 const tiktokUsername = "sstvmv";
-// Create a new connection
+
+let isUserLive = false;
+
 const tiktokLiveConnection = new WebcastPushConnection(tiktokUsername);
 
-// Connect to the chat
-// Handle connection
-tiktokLiveConnection.connect()
-    .then(state => {
-        console.info(`Connected to roomId ${state.roomId}`);
-    })
-    .catch(err => {
-        console.error('Failed to connect:', err);
 
-        // Emit "not-live" event to clients if user is not live
-        if (err.message.includes('LIVE')) {
-            io.emit('not-live', { message: `The user ${tiktokUsername} is not currently live.` });
+async function connectToTikTok() {
+    try {
+        const state = await tiktokLiveConnection.connect();
+        console.info(`Connected to roomId ${state.roomId}`);
+        isUserLive = true;
+    } catch (error) {
+        if (error instanceof Error && error.name === "InitialFetchError") {
+            console.error("Connection error: User is likely offline.");
+        } else {
+            console.error("Connection error:", error);
         }
-    });
+        isUserLive = false;
+    }
+}
+
+// Attempt initial connection
+connectToTikTok();
 
 // Handle chat messages
-tiktokLiveConnection.on('chat', data => {
-    io.emit('tiktok-chat', data);
+tiktokLiveConnection.on('chat', (data) => {
+    if (isUserLive) {
+        io.emit('tiktok-chat', data);
+    }
 });
 
 // Handle gifts
-tiktokLiveConnection.on('gift', data => {
-    io.emit('tiktok-gift', data);
+tiktokLiveConnection.on('gift', (data) => {
+    if (isUserLive) {
+        io.emit('tiktok-gift', data);
+    }
 });
 
-// Handle errors
-tiktokLiveConnection.on('error', err => {
+// Handle errors or disconnection
+tiktokLiveConnection.on('disconnected', () => {
+    console.warn('Disconnected from TikTok live.');
+    isUserLive = false;
+
+    // Retry connection after a delay
+    setTimeout(() => connectToTikTok(), 5000);
+});
+
+tiktokLiveConnection.on('error', (err) => {
     console.error('Connection error:', err);
+    isUserLive = false;
 });
-
 
 // Middleware
 app.use(express.static(path.join(__dirname, 'public')));
@@ -106,13 +159,29 @@ app.get('/all-questions', async (req, res) => {
     }
 });
 
-
+// Endpoint to get all uploaded sponsor images
+app.get('/sponsor-images', (req, res) => {
+    res.json(uploadedSponsorImages);
+});
 
 
 io.on('connection', (socket) => {
     console.log('A user connected');
 
+    // Send current live status when a client connects
+    if (!isUserLive) {
+        socket.emit('not-live', { message: `The user ${tiktokUsername} is not currently live.` });
+    }
+
     let currentOnAir = { questionId: "", question: "", answer: "" };
+
+    socket.on('display-sponsor', (data) => {
+        io.emit('display-sponsor', data); // Broadcast sponsor image to all clients
+    });
+
+    socket.on('clear-sponsor', () => {
+        io.emit('clear-sponsor'); // Broadcast clear event to all clients
+    });
 
     // Display the question
     socket.on('display-question', (data) => {
@@ -147,6 +216,8 @@ io.on('connection', (socket) => {
         io.emit('current-onair', currentOnAir); // Clear on-air display
         console.log('Cleared On-Air Display');
     });
+
+
 
     socket.on('disconnect', () => {
         console.log('A user disconnected');

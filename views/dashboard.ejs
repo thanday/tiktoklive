@@ -28,35 +28,44 @@
             justify-content: space-between;
         }
 
-        #question-list::-webkit-scrollbar {
-            width: 8px;
+        /* Sponsor Panel */
+        #sponsor-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            /* Hidden by default */
+            width: 400px;
+            height: 100%;
+            background: #1a202c;
+            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            overflow-y: auto;
         }
 
-        #question-list::-webkit-scrollbar-track {
-            background: #2d2d2d;
+        #sponsor-panel.open {
+            right: 0;
         }
 
-        #question-list::-webkit-scrollbar-thumb {
-            background: #4a5568;
-            border-radius: 4px;
-        }
-
-        #question-list::-webkit-scrollbar-thumb:hover {
-            background: #718096;
-        }
-
-        .disabled {
-            background-color: #4a5568;
-            cursor: not-allowed;
-            opacity: 0.6;
-            text-decoration: line-through;
+        .sponsor-header {
+            background: #2d3748;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
         }
     </style>
 </head>
 
 <body class="bg-gray-900 text-white font-sans">
     <div class="container mx-auto p-4">
-        <h1 class="text-4xl font-bold mb-12 mt-8 text-center">TikTok Show Control Dashboard</h1>
+        <h1 class="text-4xl font-bold mb-6 text-center">TikTok Show Control Dashboard</h1>
+        <div class="text-center mb-4">
+            <button id="toggle-sponsor-panel" class="p-2 bg-blue-500 hover:bg-blue-700 text-white rounded">
+                Sponsor Display
+            </button>
+        </div>
 
         <!-- Add Q&A Form -->
         <form action="/questions/add" method="POST" class="mb-6">
@@ -70,26 +79,16 @@
                 Add Q & A
             </button>
         </form>
-        <div class="mt-2 text-center">
-            <a href="/all-questions" class="px-4 py-2 mb-8 bg-blue-500 hover:bg-blue-700 text-white rounded">
-                View All Questions & Answers
-            </a>
-        </div>
-
-        <!-- Currently On-Air Section -->
         <div class="bg-gray-700 p-4 rounded shadow text-white mb-8">
             <h2 class="text-4xl text-red-600 font-bold mb-2">Currently On-Air</h2>
             <p id="current-question" class="text-2xl">Question: <span class="font-semibold">Waiting...</span></p>
             <p id="current-answer" class="text-2xl">Answer: <span class="font-semibold">Waiting...</span></p>
         </div>
 
-        <!-- Available Questions -->
-        <h2 class="text-2xl font-semibold mt-8 mb-4">Available Questions</h2>
+        <h2 class="text-2xl font-semibold mb-4">Available Questions</h2>
         <div id="question-container" class="bg-gray-800 rounded p-4">
             <ul id="question-list"></ul>
         </div>
-
-        <!-- Action Buttons -->
         <div id="actions">
             <button id="send-question" disabled
                 class="p-2 bg-green-500 hover:bg-green-700 text-white rounded disabled:opacity-50">
@@ -105,15 +104,46 @@
         </div>
     </div>
 
+    <!-- Sponsor Panel -->
+    <div id="sponsor-panel">
+        <div class="sponsor-header">Sponsor Display</div>
+        <form id="sponsor-upload-form" class="p-4" enctype="multipart/form-data">
+            <input type="file" id="sponsor-image-input" name="image" accept="image/png, image/gif"
+                class="w-full p-2 rounded bg-gray-700 text-white mb-4" required>
+            <button type="submit" class="w-full p-2 bg-blue-500 hover:bg-blue-700 text-white rounded">
+                Upload Sponsor Image
+            </button>
+        </form>
+        <div class="p-4">
+            <h3 class="text-2xl font-semibold mb-4">Select Sponsor Image</h3>
+            <select id="sponsor-image-select" class="w-full p-2 rounded bg-gray-700 text-white">
+                <option value="" disabled selected>Select an image</option>
+            </select>
+            <button id="play-sponsor-display"
+                class="w-full mt-4 p-2 bg-green-500 hover:bg-green-700 text-white rounded">
+                Play Sponsor Image
+            </button>
+            <button id="clear-sponsor-display" class="w-full mt-4 p-2 bg-red-500 hover:bg-red-700 text-white rounded">
+                Clear Sponsor Display
+            </button>
+        </div>
+    </div>
+
     <script>
         const socket = io();
         let selectedQuestion = null;
 
-        // Fetch and display preloaded questions
+        // Toggle Sponsor Panel
+        document.getElementById('toggle-sponsor-panel').onclick = () => {
+            const panel = document.getElementById('sponsor-panel');
+            panel.classList.toggle('open');
+        };
+        // Fetch Questions
         fetch('/questions')
             .then(response => response.json())
             .then(questions => {
                 const questionList = document.getElementById('question-list');
+                questionList.innerHTML = '';
                 questions.forEach(q => {
                     const li = document.createElement('li');
                     li.className = "flex justify-between items-center p-2 rounded hover:bg-gray-700 cursor-pointer";
@@ -122,77 +152,142 @@
                     questionText.textContent = q.content;
 
                     li.onclick = () => {
-                        if (!li.classList.contains('disabled')) {
-                            Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
-                            li.classList.add('bg-blue-500');
-                            selectedQuestion = q;
-                            document.getElementById('send-question').disabled = false;
-                            document.getElementById('send-answer').disabled = false;
-                        }
+                        // Prevent selection if disabled
+                        if (li.classList.contains('disabled')) return;
+
+                        // Highlight selected question
+                        Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
+                        li.classList.add('bg-blue-500');
+                        selectedQuestion = q;
+
+                        // Enable buttons
+                        document.getElementById('send-question').disabled = false;
+                        document.getElementById('send-answer').disabled = true;
                     };
 
-                    const deleteBtn = document.createElement('form');
-                    deleteBtn.method = 'POST';
-                    deleteBtn.action = `/questions/delete/${q._id}`;
-                    deleteBtn.innerHTML = `
-                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded">
-                            Delete
-                        </button>
-                    `;
-
                     li.appendChild(questionText);
-                    li.appendChild(deleteBtn);
                     questionList.appendChild(li);
                 });
             });
 
-        // Send question to output
+        // Send Question to On-Air
         document.getElementById('send-question').onclick = () => {
             if (selectedQuestion) {
+                // Emit selected question to On-Air
                 socket.emit('display-question', { content: selectedQuestion.content });
-                updateOnAir(selectedQuestion.content, selectedQuestion.answer);
+                updateOnAir(selectedQuestion.content, 'Waiting...');
+
+                // Enable "Display Answer" button
+                document.getElementById('send-answer').disabled = false;
+
+                // Disable "Send Question On-Air" button
+                document.getElementById('send-question').disabled = true;
             }
         };
 
-        // Send answer to output and disable question
+        // Display Answer
         document.getElementById('send-answer').onclick = () => {
             if (selectedQuestion) {
+                // Emit answer to On-Air
                 socket.emit('display-answer', { answer: selectedQuestion.answer });
                 updateOnAir(selectedQuestion.content, selectedQuestion.answer);
 
-                const questionList = document.getElementById('question-list');
-                Array.from(questionList.children).forEach(li => {
-                    if (li.classList.contains('bg-blue-500')) {
-                        li.classList.add('disabled');
-                        li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
-                        li.querySelector('span').style.color = '#718096';
-                        li.onclick = null;
-                    }
-                });
+                // Disable question
+                disableQuestion(selectedQuestion._id);
 
-                selectedQuestion = null;
-                document.getElementById('send-question').disabled = true;
+                // Disable "Display Answer" button
                 document.getElementById('send-answer').disabled = true;
             }
         };
 
-        // Clear output
+        // Clear Output
         document.getElementById('clear-output').onclick = () => {
             socket.emit('clear-output');
-            updateOnAir("", "");
+            updateOnAir('Waiting...', 'Waiting...');
         };
 
         // Update "Currently On-Air" Section
-        socket.on('current-onair', (data) => {
-            updateOnAir(data.question, data.answer);
-        });
-
         function updateOnAir(question, answer) {
             document.getElementById('current-question').innerHTML =
                 `Question: <span class="font-semibold">${question || 'Waiting...'}</span>`;
             document.getElementById('current-answer').innerHTML =
                 `Answer: <span class="font-semibold">${answer || 'Waiting...'}</span>`;
         }
+
+        // Disable question after answer is reviewed
+        function disableQuestion(questionId) {
+            const questionList = document.getElementById('question-list');
+            Array.from(questionList.children).forEach(li => {
+                if (li.textContent.trim() === selectedQuestion.content) {
+                    li.classList.add('disabled', 'bg-gray-600');
+                    li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
+                    li.querySelector('span').style.color = '#718096';
+                    li.onclick = null; // Prevent further clicks
+                }
+            });
+
+            // Reset selection
+            selectedQuestion = null;
+        }
+
+        // Socket Event Listeners
+        socket.on('current-onair', (data) => {
+            updateOnAir(data.question, data.answer);
+        });
+
+        socket.on('clear-screen', () => {
+            updateOnAir('Waiting...', 'Waiting...');
+        });
+        // Handle Sponsor Image Upload
+        const sponsorUploadForm = document.getElementById('sponsor-upload-form');
+        sponsorUploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(sponsorUploadForm);
+            try {
+                const response = await fetch('/upload-sponsor', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (response.ok) {
+                    fetchSponsorImages();
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        // Fetch Sponsor Images
+        async function fetchSponsorImages() {
+            const sponsorSelect = document.getElementById('sponsor-image-select');
+            sponsorSelect.innerHTML = '<option value="" disabled selected>Select an image</option>';
+            try {
+                const response = await fetch('/sponsor-images');
+                const images = await response.json();
+                images.forEach(img => {
+                    const option = document.createElement('option');
+                    option.value = img.url;
+                    option.textContent = img.filename;
+                    sponsorSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        fetchSponsorImages();
+
+        // Play Sponsor Image
+        document.getElementById('play-sponsor-display').onclick = () => {
+            const selectedImage = document.getElementById('sponsor-image-select').value;
+            if (selectedImage) {
+                socket.emit('display-sponsor', { imageUrl: selectedImage });
+            }
+        };
+
+        // Clear Sponsor Display
+        document.getElementById('clear-sponsor-display').onclick = () => {
+            socket.emit('clear-sponsor');
+        };
     </script>
 </body>
 
