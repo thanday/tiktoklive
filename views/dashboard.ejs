@@ -152,16 +152,27 @@
                     questionText.textContent = q.content;
 
                     li.onclick = () => {
-                        if (li.classList.contains('disabled')) return;                     
+                        if (li.classList.contains('disabled')) return;
                         Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
                         li.classList.add('bg-blue-500');
                         selectedQuestion = q;
-   
+
                         document.getElementById('send-question').disabled = false;
                         document.getElementById('send-answer').disabled = true;
                     };
 
+                    // Delete Button
+                    const deleteBtn = document.createElement('form');
+                    deleteBtn.method = 'POST';
+                    deleteBtn.action = `/questions/delete/${q._id}`;
+                    deleteBtn.innerHTML = `
+                    <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded">
+                        Delete
+                    </button>
+                `;
+
                     li.appendChild(questionText);
+                    li.appendChild(deleteBtn);
                     questionList.appendChild(li);
                 });
             });
@@ -208,7 +219,7 @@
                     li.classList.add('disabled', 'bg-gray-600');
                     li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
                     li.querySelector('span').style.color = '#718096';
-                    li.onclick = null; 
+                    li.onclick = null;
                 }
             });
 
