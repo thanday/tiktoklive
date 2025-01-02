@@ -34,7 +34,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-const uploadedSponsorImages = []; // This array should persist all uploaded images
+const uploadedSponsorImages = [];
 
 app.post('/upload-sponsor', upload.single('image'), (req, res) => {
     if (!req.file) {
@@ -44,16 +44,12 @@ app.post('/upload-sponsor', upload.single('image'), (req, res) => {
     const sponsorImageUrl = `/uploads/${req.file.filename}`;
     uploadedSponsorImages.push({ url: sponsorImageUrl, filename: req.file.originalname });
 
-    // Do not emit display-sponsor immediately
     res.json({ imageUrl: sponsorImageUrl });
 });
 
 app.get('/sponsor-images', (req, res) => {
-    res.json(uploadedSponsorImages); // Return all uploaded images
+    res.json(uploadedSponsorImages);
 });
-
-
-
 
 
 
@@ -78,8 +74,6 @@ async function connectToTikTok() {
         isUserLive = false;
     }
 }
-
-// Attempt initial connection
 connectToTikTok();
 
 // Handle chat messages
@@ -141,7 +135,7 @@ app.get('/test-questions', async (req, res) => {
     try {
         const questions = await Question.find();
         console.log('Fetched Questions:', questions);
-        res.json(questions); // Return questions as JSON for testing
+        res.json(questions);
     } catch (error) {
         console.error('Error fetching questions in test:', error);
         res.status(500).send('Error fetching questions in test');
@@ -151,8 +145,8 @@ app.get('/test-questions', async (req, res) => {
 
 app.get('/all-questions', async (req, res) => {
     try {
-        const questions = await Question.find(); // Fetch all questions
-        res.render('all-questions', { questions }); // Pass questions to EJS template
+        const questions = await Question.find(); 
+        res.render('all-questions', { questions }); 
     } catch (error) {
         console.error('Error fetching questions:', error);
         res.status(500).send('Error fetching questions');
@@ -183,19 +177,27 @@ io.on('connection', (socket) => {
         io.emit('clear-sponsor'); // Broadcast clear event to all clients
     });
 
-    // Display the question
     socket.on('display-question', (data) => {
         currentOnAir = {
             questionId: data._id, // Use MongoDB's unique ID
             question: data.content,
             answer: 'Waiting...', // Default answer
         };
-
-        // Emit the question and update all clients
-        io.emit('show-question', data); // Send to output page
-        io.emit('current-onair', currentOnAir); // Send to control dashboard and other pages
-        console.log('On-Air Question Emitted:', currentOnAir);
+        if (data.type === 'emoji') {
+            io.emit('show-question', {
+                type: 'emoji',
+                emojis: data.content.split(' '), // Split emojis into an array
+            });
+            io.emit('current-onair', currentOnAir); // Send to control dashboard and other pages
+        } else {
+            io.emit('show-question', {
+                type: 'text',
+                content: data.content,
+            });
+            io.emit('current-onair', currentOnAir); // Send to control dashboard and other pages
+        }
     });
+
 
     // Display the answer
     socket.on('display-answer', (data) => {
@@ -205,6 +207,12 @@ io.on('connection', (socket) => {
         io.emit('show-answer', data); // Send to output page
         io.emit('current-onair', currentOnAir); // Update control dashboard
         console.log('Answer Emitted:', currentOnAir);
+    });
+
+    // Display emoji question
+    socket.on('display-emoji-question', (data) => {
+        console.log('Emoji Question Data:', data);
+        io.emit('display-emoji-question', data); // Broadcast emoji question
     });
 
     // Clear the screen

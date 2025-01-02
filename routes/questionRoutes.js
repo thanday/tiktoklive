@@ -4,19 +4,24 @@ const Question = require('../controllers/questionModel');
 
 // Fetch all questions
 router.get('/', async (req, res) => {
-    const questions = await Question.find();
-    res.json(questions);
+    try {
+        const questions = await Question.find();
+        res.json(questions);
+    } catch (error) {
+        console.error('Error fetching questions:', error);
+        res.status(500).send('Error fetching questions');
+    }
 });
 
 router.post('/add', async (req, res) => {
-    const { content, answer } = req.body; // Get question and answer
     try {
-        const newQuestion = new Question({ content, answer });
-        await newQuestion.save();
-        res.redirect('/dashboard'); // Redirect back to the dashboard
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error adding question and answer');
+        const { content, answer, type } = req.body;
+        const question = new Question({ content, answer, type });
+        await question.save();
+        res.redirect('/dashboard');
+    } catch (error) {
+        console.error('Error adding question:', error);
+        res.status(500).send('Error adding question');
     }
 });
 

@@ -66,19 +66,24 @@
                 Sponsor Display
             </button>
         </div>
-
         <!-- Add Q&A Form -->
         <form action="/questions/add" method="POST" class="mb-6">
             <div class="flex gap-4 items-center">
-                <input type="text" name="content" placeholder="Enter the question"
-                    class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <textarea name="content"
+                    placeholder="Enter the question (text or emojis {Enter emojis separated by space (e.g., 💰 ⭐ 💰 🔥)})"
+                    class="w-full p-2 rounded bg-gray-800 text-white" required></textarea>
                 <input type="text" name="answer" placeholder="Enter the answer"
                     class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <select name="type" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                    <option value="text">Text</option>
+                    <option value="emoji">Emoji</option>
+                </select>
             </div>
             <button type="submit" class="mt-4 p-2 bg-blue-500 hover:bg-blue-700 text-white rounded">
-                Add Q & A
+                Add Question
             </button>
         </form>
+
         <div class="bg-gray-700 p-4 rounded shadow text-white mb-8">
             <h2 class="text-4xl text-red-600 font-bold mb-2">Currently On-Air</h2>
             <p id="current-question" class="text-2xl">Question: <span class="font-semibold">Waiting...</span></p>
@@ -132,6 +137,7 @@
     <script>
         const socket = io();
         let selectedQuestion = null;
+        const playedQuestions = new Set();
 
         // Toggle Sponsor Panel
         document.getElementById('toggle-sponsor-panel').onclick = () => {
@@ -139,54 +145,77 @@
             panel.classList.toggle('open');
         };
         // Fetch Questions
-        fetch('/questions')
-            .then(response => response.json())
-            .then(questions => {
-                const questionList = document.getElementById('question-list');
-                questionList.innerHTML = '';
-                questions.forEach(q => {
-                    const li = document.createElement('li');
-                    li.className = "flex justify-between items-center p-2 rounded hover:bg-gray-700 cursor-pointer";
+        function fetchQuestions() {
+            fetch('/test-questions')
+                .then(response => response.json())
+                .then(questions => {
+                    console.log('Fetched Questions:', questions); 
+                    const questionList = document.getElementById('question-list');
+                    questionList.innerHTML = ''; 
+                    if (questions.length === 0) {
+                        questionList.innerHTML = '<li class="text-gray-500 text-center">No questions available</li>';
+                        return;
+                    }
 
-                    const questionText = document.createElement('span');
-                    questionText.textContent = q.content;
+                    // Render each question
+                    questions.forEach(q => {
+                        console.log('Rendering Question:', q); 
+                        const li = document.createElement('li');
+                        li.className = `flex justify-between items-center p-2 rounded ${playedQuestions.has(q._id) ? 'bg-gray-600 disabled' : 'hover:bg-gray-700 cursor-pointer'
+                            } ${q.type === 'emoji' ? '' : ''}`;
 
-                    li.onclick = () => {
-                        if (li.classList.contains('disabled')) return;
-                        Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
-                        li.classList.add('bg-blue-500');
-                        selectedQuestion = q;
+                        const questionText = document.createElement('span');
+                        questionText.textContent = `${q.type === 'emoji' ? '®️ | Emoji Question | ®️                           ': ' '}${q.content}`;
+                        if (playedQuestions.has(q._id)) {
+                            questionText.style.color = '#718096'; // Gray out text for played questions
+                        }
 
-                        document.getElementById('send-question').disabled = false;
-                        document.getElementById('send-answer').disabled = true;
-                    };
+                        li.onclick = () => {
+                            if (li.classList.contains('disabled')) return;
+                            Array.from(questionList.children).forEach(child => child.classList.remove('bg-blue-500'));
+                            li.classList.add('bg-blue-500');
+                            selectedQuestion = q;
 
-                    // Delete Button
-                    const deleteBtn = document.createElement('form');
-                    deleteBtn.method = 'POST';
-                    deleteBtn.action = `/questions/delete/${q._id}`;
-                    deleteBtn.innerHTML = `
-                    <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded">
-                        Delete
-                    </button>
-                `;
+                            document.getElementById('send-question').disabled = false;
+                            document.getElementById('send-answer').disabled = true;
+                        };
 
-                    li.appendChild(questionText);
-                    li.appendChild(deleteBtn);
-                    questionList.appendChild(li);
+                        const deleteBtn = document.createElement('form');
+                        deleteBtn.method = 'POST';
+                        deleteBtn.action = `/questions/delete/${q._id}`;
+                        deleteBtn.innerHTML = `
+                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded">
+                            Delete
+                        </button>
+                    `;
+
+                        li.appendChild(questionText);
+                        li.appendChild(deleteBtn);
+                        questionList.appendChild(li);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching questions:', error);
+                    const questionList = document.getElementById('question-list');
+                    questionList.innerHTML = '<li class="text-red-500 text-center">Error loading questions</li>';
                 });
-            });
+        }
 
         document.getElementById('send-question').onclick = () => {
             if (selectedQuestion) {
-                socket.emit('display-question', { content: selectedQuestion.content });
+                socket.emit('display-question', {
+                    _id: selectedQuestion._id,
+                    content: selectedQuestion.content,
+                    type: selectedQuestion.type,
+                    answer: selectedQuestion.answer,
+                });
+
                 updateOnAir(selectedQuestion.content, 'Waiting...');
-
                 document.getElementById('send-answer').disabled = false;
-
                 document.getElementById('send-question').disabled = true;
             }
         };
+
 
         // Display Answer
         document.getElementById('send-answer').onclick = () => {
@@ -213,17 +242,8 @@
         }
 
         function disableQuestion(questionId) {
-            const questionList = document.getElementById('question-list');
-            Array.from(questionList.children).forEach(li => {
-                if (li.textContent.trim() === selectedQuestion.content) {
-                    li.classList.add('disabled', 'bg-gray-600');
-                    li.classList.remove('hover:bg-gray-700', 'bg-blue-500');
-                    li.querySelector('span').style.color = '#718096';
-                    li.onclick = null;
-                }
-            });
-
-            selectedQuestion = null;
+            playedQuestions.add(questionId); // Mark question as played
+            fetchQuestions(); // Re-fetch questions to update the list
         }
 
         socket.on('current-onair', (data) => {
@@ -233,6 +253,10 @@
         socket.on('clear-screen', () => {
             updateOnAir('Waiting...', 'Waiting...');
         });
+
+
+        fetchQuestions(); // Initial fetch of questions
+
         const sponsorUploadForm = document.getElementById('sponsor-upload-form');
         sponsorUploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -278,6 +302,8 @@
         document.getElementById('clear-sponsor-display').onclick = () => {
             socket.emit('clear-sponsor');
         };
+
+
     </script>
 </body>
 

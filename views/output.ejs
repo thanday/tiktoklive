@@ -10,7 +10,6 @@
     <title>Live Output</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        /* General Reset */
         * {
             margin: 0;
             padding: 0;
@@ -23,7 +22,6 @@
             align-items: center;
             height: 100vh;
             background: rgba(0, 0, 0, 0);
-            /* Transparent background */
             overflow: hidden;
         }
 
@@ -33,11 +31,9 @@
             width: 608px;
             height: 1080px;
             background: rgba(0, 0, 0, 0);
-            /* Transparent background */
             overflow: hidden;
         }
 
-        /* Top Overlay with Fading Gradient and Wave Animation */
         .top-overlay {
             position: absolute;
             top: 0;
@@ -60,7 +56,6 @@
             border-radius: 50%;
             animation: wave-motion 6s linear infinite;
             opacity: 0.6;
-            /* Wave transparency */
         }
 
         @keyframes wave-motion {
@@ -125,7 +120,6 @@
 
         #sponsor-image {
             display: none;
-            /* Initially hidden */
             position: absolute;
             bottom: 10%;
             left: 50%;
@@ -160,15 +154,12 @@
             text-align: center;
             color: white;
             background: linear-gradient(to right, #FF0050, #00F2EA);
-            /* TikTok gradient */
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5);
             display: none;
-            /* Initially hidden */
         }
 
-        /* TikTok-inspired Blast Animation for Answer */
         @keyframes blast-effect {
             0% {
                 transform: scale(0.2) rotate(-10deg);
@@ -199,6 +190,41 @@
             width: 80px;
             z-index: 10;
         }
+
+        /* Emoji question */
+
+
+        #emoji-question {
+            position: absolute;
+            top: 19%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            z-index: 15;
+            display: none;
+        }
+
+        .emoji-box {
+            --blur: 1.75rem;
+            --box-blur: calc(0.5 * var(--blur));
+            --glow: var(--color);
+            --size: 6rem;
+
+            align-items: center;
+            border-radius: 12px;
+            border: 4px solid currentColor;
+            box-shadow: inset 0 0 var(--box-blur) var(--glow), 0 0 var(--box-blur) var(--glow);
+            color: var(--color, white);
+            display: flex;
+            justify-content: center;
+            font-size: 3rem;
+            height: var(--size);
+            width: var(--size);
+            text-shadow: 0 0 var(--blur) var(--glow);
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 
@@ -216,11 +242,12 @@
         <!-- Question Text -->
         <div id="question"></div>
 
+        <!-- Emoji Question -->
+        <div id="emoji-question"> </div>
+
         <!-- Answer Text -->
         <div id="answer"></div>
 
-        <!-- Image Display Area -->
-        <!-- Sponsor Image Display Area -->
         <!-- Sponsor Image Display Area -->
         <div id="sponsor-image" style="display: none;"></div>
 
@@ -232,22 +259,48 @@
     <script>
         const socket = io();
 
-        // Show the question
+
+        // Handle both text and emoji questions
         socket.on('show-question', (data) => {
             const questionElement = document.getElementById('question');
-            questionElement.textContent = data.content;
+            const emojiContainer = document.getElementById('emoji-question');
+            const answerElement = document.getElementById('answer');
 
-            // Reset animation state
+
+            // Reset styles and clear containers
             questionElement.style.display = 'none';
-            questionElement.classList.remove('show-blast');
-            void questionElement.offsetWidth; // Trigger reflow
+            emojiContainer.style.display = 'none';
+            answerElement.style.top = '25%'; 
+            emojiContainer.innerHTML = ''; 
 
-            // Show with animation
-            questionElement.style.display = 'block';
-            questionElement.classList.add('show-blast');
+            if (data.type === 'emoji') {
+                if (Array.isArray(data.emojis)) {
+                    data.emojis.forEach((emoji, index) => {
+                        const emojiBox = document.createElement('div');
+                        emojiBox.className = 'emoji-box';
+                        emojiBox.style.setProperty('--color', getGlowColor(index)); 
+                        emojiBox.innerHTML = `<div class="symbol">${emoji}</div>`; 
+                        emojiContainer.appendChild(emojiBox);
+                    });
+
+                    emojiContainer.style.display = 'flex'; 
+                    answerElement.style.top = '30%'; 
+                    console.log('Displayed Emoji Question:', data.emojis);
+
+                } else {
+                    console.error('Expected data.emojis to be an array, but received:', data.emojis);
+                }
+            } else {
+                // Handle text question
+                questionElement.textContent = data.content;
+                questionElement.style.display = 'block';
+                questionElement.classList.add('show-blast');
+                console.log('Displayed Text Question:', data.content);
+            }
         });
 
-        // Show the answer with animation
+
+        // Show the answer
         socket.on('show-answer', (data) => {
             const answerElement = document.getElementById('answer');
             answerElement.textContent = data.answer;
@@ -255,29 +308,40 @@
             // Reset animation state
             answerElement.style.display = 'none';
             answerElement.classList.remove('show-blast');
-            void answerElement.offsetWidth; // Trigger reflow
-
+            void answerElement.offsetWidth; 
             // Show with animation
             answerElement.style.display = 'block';
             answerElement.classList.add('show-blast');
         });
 
+
         // Clear the screen
         socket.on('clear-screen', () => {
             const questionElement = document.getElementById('question');
+            const emojiContainer = document.getElementById('emoji-question'); 
             const answerElement = document.getElementById('answer');
 
-            questionElement.style.display = 'none';
-            answerElement.style.display = 'none';
+            // Hide all elements
+            if (questionElement) questionElement.style.display = 'none';
+            if (emojiContainer) {
+                emojiContainer.style.display = 'none';
+                emojiContainer.innerHTML = ''; 
+            }
+            if (answerElement) answerElement.style.display = 'none';
 
-            // Reset the animation state
-            answerElement.classList.remove('show-blast');
+            console.log('Screen cleared successfully');
         });
+
+        function getGlowColor(index) {
+            const colors = ['#FCEAAC', '#025AFDFF', '#E555C7', '#B7E7F7', '#EB710DFF', '#00FF00', '#8A0AAAFF'];
+            return colors[index % colors.length];
+        }
+
 
         socket.on('display-sponsor', (data) => {
             const sponsorImageDiv = document.getElementById('sponsor-image');
             sponsorImageDiv.innerHTML = `<img src="${data.imageUrl}" alt="Sponsor Image" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
-            sponsorImageDiv.style.display = 'block'; // Show the sponsor image area
+            sponsorImageDiv.style.display = 'block'; 
         });
 
         socket.on('clear-sponsor', () => {
