@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=MV+Waheed&display=swap" rel="stylesheet">
+
+    <title>My Live Output</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0);
+            overflow: hidden;
+        }
+
+
+        .container {
+            position: relative;
+            width: 1080px;
+            height: 1920px;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        /* TOP OVERLAY */
+        .top-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            background: radial-gradient(ellipse at top center, rgb(177, 33, 196), transparent 80%);
+            animation: topWave 6s ease-in-out infinite alternate;
+            z-index: 2;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        /* BOTTOM OVERLAY */
+        .bottom-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background: radial-gradient(ellipse at bottom center, rgba(0, 164, 219, 0.897), transparent 90%);
+            animation: bottomWave 6s ease-in-out infinite alternate;
+            z-index: 2;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        /* Animation for top */
+        @keyframes topWave {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: translateY(10px) scale(1.05);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translateY(20px) scale(1.1);
+                opacity: 0.5;
+            }
+        }
+
+        /* Animation for bottom */
+        @keyframes bottomWave {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: translateY(-10px) scale(1.05);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translateY(-20px) scale(1.1);
+                opacity: 0.5;
+            }
+        }
+
+                /* Top Logo */
+                .top-logo {
+            position: absolute;
+            top: 9%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 620px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Top Overlay Animation -->
+        <div class="top-overlay"></div>
+
+        <!-- Bottom Overlay Animation -->
+        <div class="bottom-overlay"></div>
+
+                <!-- Top Logo -->
+                <img src="/images/logo-top.gif" alt="Top Logo" class="top-logo">
+    </div>
+
+</body>
+
+</html>
